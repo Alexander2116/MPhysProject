@@ -11,6 +11,7 @@ The data is taken from range 330nm and 630nm with step ~0.04nm
 
 import matplotlib.pyplot as plt
 from pandas import read_csv
+import numpy as np
 
 def import_csv(path):
     """
@@ -38,10 +39,11 @@ x = data[0]
 y = data[1]
 del data
 
-plt.scatter(x, y, label= "stars", color= "green", marker= "*", s=30)
-plt.axis([min(x), max(x), min(y), max(y)])
+#plt.scatter(x, y, marker=',')
+plt.plot(x, y, ',')
+plt.xticks([])
+plt.yticks([])
 
 plt.xlabel('xlabel')
 plt.ylabel('ylabel')
 plt.show()
-
