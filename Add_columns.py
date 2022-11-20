@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 import os.path
 from os import listdir
-import pandas
 import statistics as st
 
 def import_csv(path):

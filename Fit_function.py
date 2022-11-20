@@ -39,8 +39,9 @@ x = data[0]
 y = data[1]
 del data
 
-#plt.scatter(x, y, marker=',')
-plt.plot(x, y, ',')
+plt.figure(figsize=(40,21))
+plt.scatter(x, y, marker='.')
+#plt.plot(x, y, ',')
 plt.xticks([])
 plt.yticks([])
 
