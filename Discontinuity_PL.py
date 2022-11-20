@@ -95,11 +95,10 @@ def remove_incontinuity(intensity,x=1):
     ----------
     x : int
         Indicates the range of spectra.
+    1: 330nm-630nm
 
     Returns
-    -------
-    None.
-    
+        Intensity
     """
     # Python does not have easy way to implements switch{}
     intensity = change_type(intensity)
@@ -120,7 +119,10 @@ def remove_incontinuity(intensity,x=1):
         inten =sum(inten_d)
         for i in range(k-1):
             intensity[t+i+1] -= inten
-            
+
+    elif x==2:
+        print('Put the code different range')
+
     else:
         print('Not defined, initial values returned')
     return intensity
