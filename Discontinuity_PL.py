@@ -12,19 +12,12 @@ between 2 adjoined X values.
 @author: Alex
 """
 
-
+"""
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import pandas as pd
 
 def import_csv(path):
-    """
-    
-    Returns:
-    -------
-    None.
-
-    """
     data = list()
     file = read_csv(path,header=None)
     for i in range(len(file.columns)):
@@ -70,18 +63,19 @@ def add_column2(path,data, column_name = ''):
         
     file.to_csv(path,index=False,header=None)
 
-def adjoined_difference(x):
-    diff = []
-    for i in range(len(x)-1):
-        diff.append((float(x[i+1])-float(x[i])))
-    return diff
-
 def filter_condition(x):
     positions = []
     for i in range(len(x)):
         if float(x[i])>0.11:
             positions.append(i)
     return positions
+"""
+def adjoined_difference(x):
+    diff = []
+    for i in range(len(x)-1):
+        diff.append((float(x[i+1])-float(x[i])))
+    return diff
+
 
 def change_type(x):
     y = []
@@ -89,7 +83,7 @@ def change_type(x):
         y.append(float(i))
     return y
 
-def remove_incontinuity(intensity,x=1):
+def remove_discontinuity(intensity,x=1):
     """
     Parameters
     ----------
@@ -107,8 +101,8 @@ def remove_incontinuity(intensity,x=1):
     if x==1:
         inten_d =[]
         # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
-        for j in range(6):
-            t = 2033 + j*1014 - 1
+        for j in range(7):
+            t = 1019 + j*1014 - 1
             inten_d.append(float(intensity_diff[t])+1.0)
             inten =sum(inten_d)
             for i in range(1014):
@@ -127,7 +121,7 @@ def remove_incontinuity(intensity,x=1):
         print('Not defined, initial values returned')
     return intensity
 
-
+"""
 def __main__():
     import_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\R7_1nm_1s_0.257mW_295.16K.csv'
     export_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\test.csv'
@@ -139,8 +133,10 @@ def __main__():
     x = data[0]
     y = data[3]
     del data
-    z = remove_incontinuity(y)
+    z = remove_discontinuity(y)
 
     add_column2(export_path, x)
     add_column2(export_path, y)
     add_column2(export_path, z)
+    
+"""

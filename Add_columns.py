@@ -11,8 +11,9 @@ import numpy as np
 import os.path
 from os import listdir
 import statistics as st
+import Discontinuity_PL as DPL
 
-def import_csv(path):
+def import_csv(path, remove_first_list = False):
     """
     
     Returns:
@@ -26,6 +27,11 @@ def import_csv(path):
         data.append(file[i].tolist())
     del file
     
+    # Remove first item in each column (column name)
+    if remove_first_list == True:
+        for i in data:
+            i.pop(0)
+            
     return data
 
 def create_csv(path):
@@ -34,14 +40,14 @@ def create_csv(path):
     file.close()
     
 def add_column(path,data):
-    
+    # Add column to already existing csv file
     file = read_csv(path,header=None)
     file[len(file.columns)+1] = data
     file.to_csv(path,index=False,header=None)
     
     
 def add_column2(path,data, column_name = ''):
-
+    # Add column to csv file
     try:
         file = read_csv(path,header=None)
     except:
@@ -65,6 +71,7 @@ def add_column2(path,data, column_name = ''):
     
 
 def mean_intensity(data):
+    # Used in initial file
     number_column = len(data)
     mean_column = []
     std_list = []
@@ -82,32 +89,29 @@ def mean_intensity(data):
     return mean_column, std_list
 
 def energy_deriv(data):
+    # data = wavelength column
     energy = []
-    for wavelength in data[0]:
-        energy.append(1240/wavelength)
+    for wavelength in data:
+        energy.append(1240/float(wavelength))
     return energy
 
 def empty_col(data):
+    # Adds empty column to the data
     empty_column = []
-    for wavelength in data[0]:
+    for wavelength in data:
         empty_column.append('')
     return empty_column
 
 def remove_background(data,dark_data):
+    # Data = intensity column
     clear_signal = []
-    for i in range(len(data[1])):
-        clear_signal.append(data[-2][i] - dark_data[i])
+    for i in range(len(data)):
+        clear_signal.append(float(data[i]) - float(dark_data[i]))
     return clear_signal
-
-def direct_bandgap():
-    return 0
-    
-def indirect_bandgap():
-    return 0
 
 def Planks_law(wavelength):
     # Spectral Radiance exitance
-    lamb = wavelength/1000 # um
+    lamb = float(wavelength)/1000 # um
     T = 3000 # K
     h = 6.6256*10**(-34) # Js
     k = 1.3805*10**(-23) # J/K
@@ -115,15 +119,16 @@ def Planks_law(wavelength):
     return 2*np.pi*h*c**2 / (lamb**5) * 1/(np.exp(h*c/(k*T*lamb))-1)
 
 def Plank_spectrum(data):
+    # Data = wavelength
     spec = []
-    for wavelength in data[0]:
+    for wavelength in data:
         spec.append(Planks_law(wavelength))
     return spec
 
 def Spectral_norm(spectra_list):
     # Normalized Spectral Radiance
     # RESPONSE
-    return [100*i/(spectra_list[-1]) for i in spectra_list]
+    return [100*float(i)/(float(spectra_list[-1])) for i in spectra_list]
 
 def True_spectrum(measured,response):
     # NORMALISED INTENSITY
@@ -131,14 +136,16 @@ def True_spectrum(measured,response):
     # Data / response (spectral_norm, which is normalized Plank's Law)
     spec = []
     for i in range(len(measured)):
-        spec.append(measured[i]/response[i])
+        spec.append(float(measured[i])/float(response[i]))
     return spec
 
 def half_value(data_column):
-    return [i/2 for i in data_column]
+    # data_column = backgroundless intensity
+    return [float(i)/2 for i in data_column]
 
 def twice_value(data_column):
-    return [2*i for i in data_column]
+    # data_column = backgroundless intensity
+    return [2*float(i) for i in data_column]
 
 
 def __main__(PATH):
@@ -148,27 +155,29 @@ def __main__(PATH):
     Creates Mean Intensity column from n next columns
     
     """
-    input_path = PATH
-    output_path = 'D:\\MPhys_data_modified'
+    import_path = PATH
+    export_path = 'D:\\MPhys_data_modified_2'
+    isExist = os.path.exists(export_path)
     
-    filenames = listdir(input_path)
+    if not isExist:
+        os.makedirs(export_path)
+    
+    filenames = listdir(import_path)
     folder_list = [ filename for filename in filenames]
     
     for file in folder_list: # what day data was taken
-        new_path = input_path + "\\" + file
+        new_path = import_path + "\\" + file
         new_files = [filename for filename in listdir(new_path)]
 
         for file2 in new_files: # files in that day
             final_path = new_path + '\\' + file2
-            final_output = output_path + '\\' + file2
+            final_output = export_path + '\\' + file2
             data = import_csv(final_path)
             create_csv(final_output)
                     
             ### MEAN INTENSITY  
             mean_int = mean_intensity(data)[0]
             mean_int_std = mean_intensity(data)[1]
-            add_column(final_path,mean_int)
-            add_column(final_path,mean_int_std)
             
             add_column2(final_output,data[0], 'wavelength [nm]')
             add_column2(final_output,mean_int, 'intensity')
@@ -178,43 +187,51 @@ def __main__(PATH):
             
         new_files.remove('dark.csv')
         
-        dark_data_path = new_path + '\\' + 'dark.csv'
-        dark_data = import_csv(dark_data_path)[-2]
+        dark_data_path = export_path + '\\' + 'dark.csv'
+        dark_data = import_csv(dark_data_path,True)[1]
         
         for file2 in new_files: # files in that day
-            final_path = new_path + '\\' + file2
-            final_output = output_path + '\\' + file2
-            data = import_csv(final_path)
+            final_output = export_path + '\\' + file2
+            data = import_csv(final_output,True) # 0: Wavelength, 1: Intensity
             
             ### REMOVE BACKGROUND
-            removed_background = remove_background(data,dark_data)
-            add_column(final_path,removed_background)
+            removed_background = remove_background(data[1],dark_data)
+            #add_column(final_path,removed_background)
             add_column2(final_output,removed_background, 'Backgroundless I')
             
+            ### REMOVE DISCONTINUITY
+            removed_disc = DPL.remove_discontinuity(removed_background,1)
+            del removed_background
+            #add_column(final_path,removed_disc)
+            add_column2(final_output,removed_disc, 'Continous I')
+            
             ### Wavelength -> Energy
-            add_column(final_path,empty_col(data))
-            add_column(final_path,energy_deriv(data))
-            add_column2(final_output,energy_deriv(data), 'eV')
+            #add_column(final_path,empty_col(data))
+            #add_column(final_path,energy_deriv(data))
+            add_column2(final_output,energy_deriv(data[0]), 'eV')
             
             
             ### TRUE SPECTRUM
-            add_column(final_path,empty_col(data))
-            add_column(final_path,True_spectrum(removed_background,Spectral_norm(Plank_spectrum(data))))
-            add_column2(final_output,True_spectrum(removed_background,Spectral_norm(Plank_spectrum(data))), 'True Spectrum')
+            #add_column(final_path,empty_col(data))
+            #add_column(final_path,True_spectrum(removed_disc,Spectral_norm(Plank_spectrum(data))))
+            add_column2(final_output,True_spectrum(removed_disc,Spectral_norm(Plank_spectrum(data[0]))), 'True Spectrum')
             
             
             ### Half and twice data
-            half_intensity = half_value(removed_background)
-            twice_intensity = twice_value(removed_background)
+            half_intensity = half_value(removed_disc)
+            twice_intensity = twice_value(removed_disc)
             
-            add_column2(final_output,empty_col(data))
+            
+            add_column2(final_output,empty_col(data[0]))
             add_column2(final_output,half_intensity, 'I/2')
-            add_column2(final_output,True_spectrum(half_intensity,Spectral_norm(Plank_spectrum(data))), 'True Spec / 2')
+            add_column2(final_output,True_spectrum(half_intensity,Spectral_norm(Plank_spectrum(data[0]))), 'True Spec / 2')
             
-            add_column2(final_output,empty_col(data))
+            add_column2(final_output,empty_col(data[0]))
             add_column2(final_output,twice_intensity, '2I')
-            add_column2(final_output,True_spectrum(twice_intensity,Spectral_norm(Plank_spectrum(data))), '2 True Spec')
+            add_column2(final_output,True_spectrum(twice_intensity,Spectral_norm(Plank_spectrum(data[0]))), '2 True Spec')
             
+            del half_intensity
+            del twice_intensity
             del data
         
         del dark_data
