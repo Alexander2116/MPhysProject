@@ -73,7 +73,7 @@ def add_column2(path,data, column_name = ''):
 def adjoined_difference(x):
     diff = []
     for i in range(len(x)-1):
-        diff.append((float(x[i+1])-float(x[i]))/float(x[i]))
+        diff.append((float(x[i+1])-float(x[i])))
     return diff
 
 def filter_condition(x):
@@ -89,40 +89,56 @@ def change_type(x):
         y.append(float(i))
     return y
 
-def adjust(intensity):
+def remove_incontinuity(intensity,x=1):
+    """
+    Parameters
+    ----------
+    x : int
+        Indicates the range of spectra.
+
+    Returns
+    -------
+    None.
+    
+    """
+    # Python does not have easy way to implements switch{}
     intensity = change_type(intensity)
     intensity_diff = adjoined_difference(intensity)
-    print(intensity_diff)
-    points = filter_condition(intensity_diff)
-    print(points)
-    # Move intensity
-    for i in range(len(points)-1):
-        for j in range(points[i], points[i+1]-1):
-            intensity[j+1] -= intensity_diff[j]
+    #330_630nm
+    if x==1:
+        inten_d =[]
+        # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
+        for j in range(6):
+            t = 2033 + j*1014 - 1
+            inten_d.append(float(intensity_diff[t])+1.0)
+            inten =sum(inten_d)
+            for i in range(1014):
+                intensity[t+i+1] -= inten
+        t += 1014
+        k = len(intensity) - t
+        inten_d.append(float(intensity_diff[t])+1.0)
+        inten =sum(inten_d)
+        for i in range(k-1):
+            intensity[t+i+1] -= inten
+            
+    else:
+        print('Not defined, initial values returned')
     return intensity
 
-path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\R7_1nm_1s_0.257mW_295.16K.csv'
-path2 = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\test.csv'
 
-create_csv(path2)
+def __main__():
+    import_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\R7_1nm_1s_0.257mW_295.16K.csv'
+    export_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\test.csv'
 
-data = import_csv(path)
+    create_csv(export_path)
 
-x = data[0]
-y = data[3]
-del data
-z = adjust(y)
+    data = import_csv(import_path)
 
-#add_column2(path2, x)
-#add_column2(path2, y)
-#add_column2(path2, z)
+    x = data[0]
+    y = data[3]
+    del data
+    z = remove_incontinuity(y)
 
-#plt.figure(figsize=(40,21))
-#plt.scatter(x, y, marker='.')
-#plt.plot(x, y, ',')
-#plt.xticks([])
-#plt.yticks([])
-
-#plt.xlabel('xlabel')
-#plt.ylabel('ylabel')
-#plt.show()
+    add_column2(export_path, x)
+    add_column2(export_path, y)
+    add_column2(export_path, z)
