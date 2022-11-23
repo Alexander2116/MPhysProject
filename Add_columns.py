@@ -12,6 +12,7 @@ import os.path
 from os import listdir
 import statistics as st
 import Discontinuity_PL as DPL
+import Fit_function as BL
 
 def import_csv(path, remove_first_list = False):
     """
@@ -106,7 +107,13 @@ def remove_background(data,dark_data):
     # Data = intensity column
     clear_signal = []
     for i in range(len(data)):
-        clear_signal.append(float(data[i]) - float(dark_data[i]))
+        result = float(data[i]) - float(dark_data[i])
+        # Replace negative values with 0
+        if result < 0:
+            clear_signal.append(0)
+        else:
+            clear_signal.append(result)
+            
     return clear_signal
 
 def Planks_law(wavelength):
@@ -130,13 +137,33 @@ def Spectral_norm(spectra_list):
     # RESPONSE
     return [100*float(i)/(float(spectra_list[-1])) for i in spectra_list]
 
-def True_spectrum(measured,response):
+def Bulb_spect(data):
+    # Data = wavelength
+    Bulb = BL.Bulb_spectra()
+    Bulb.Full_range() # Indicates that the range is 330-630
+    spec = []
+    for lam in data:
+        spec.append(Bulb.Spectra(float(lam)))
+    del Bulb
+    return spec
+
+def Response(data):
+    # Data = wavelength
+    spec = []
+    Bulb = Bulb_spect(data)
+    Plank = Spectral_norm(data)
+    for i in range(len(data)):
+        spec.append(float(Bulb[i])/float(Plank[i]))
+    return spec
+
+def True_spectrum(Intensity, Wavelength):
     # NORMALISED INTENSITY
     # True PL spectrum after applying blackbody radiation
-    # Data / response (spectral_norm, which is normalized Plank's Law)
+    # Intensity, Wavelength = Lists
     spec = []
-    for i in range(len(measured)):
-        spec.append(float(measured[i])/float(response[i]))
+    Resp = Response(Wavelength)
+    for i in range(len(Intensity)):
+        spec.append(float(Intensity[i])/float(Resp[i]))
     return spec
 
 def half_value(data_column):
@@ -214,7 +241,7 @@ def __main__(PATH):
             ### TRUE SPECTRUM
             #add_column(final_path,empty_col(data))
             #add_column(final_path,True_spectrum(removed_disc,Spectral_norm(Plank_spectrum(data))))
-            add_column2(final_output,True_spectrum(removed_disc,Spectral_norm(Plank_spectrum(data[0]))), 'True Spectrum')
+            add_column2(final_output,True_spectrum(removed_disc,data[0]), 'True Spectrum')
             
             
             ### Half and twice data
@@ -224,11 +251,11 @@ def __main__(PATH):
             
             add_column2(final_output,empty_col(data[0]))
             add_column2(final_output,half_intensity, 'I/2')
-            add_column2(final_output,True_spectrum(half_intensity,Spectral_norm(Plank_spectrum(data[0]))), 'True Spec / 2')
+            add_column2(final_output,True_spectrum(half_intensity,data[0]), 'True Spec / 2')
             
             add_column2(final_output,empty_col(data[0]))
             add_column2(final_output,twice_intensity, '2I')
-            add_column2(final_output,True_spectrum(twice_intensity,Spectral_norm(Plank_spectrum(data[0]))), '2 True Spec')
+            add_column2(final_output,True_spectrum(twice_intensity,data[0]), '2 True Spec')
             
             del half_intensity
             del twice_intensity

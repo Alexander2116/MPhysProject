@@ -12,7 +12,7 @@ between 2 adjoined X values.
 @author: Alex
 """
 
-"""
+'''
 from pandas import read_csv
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -69,7 +69,7 @@ def filter_condition(x):
         if float(x[i])>0.11:
             positions.append(i)
     return positions
-"""
+'''
 def adjoined_difference(x):
     diff = []
     for i in range(len(x)-1):
@@ -123,15 +123,15 @@ def remove_discontinuity(intensity,x=1):
 
 """
 def __main__():
-    import_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\R7_1nm_1s_0.257mW_295.16K.csv'
-    export_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\test.csv'
+    import_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\black_body_330_630.csv'
+    export_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\continous_black_body_330_630.csv'
 
     create_csv(export_path)
 
     data = import_csv(import_path)
 
     x = data[0]
-    y = data[3]
+    y = data[2]
     del data
     z = remove_discontinuity(y)
 

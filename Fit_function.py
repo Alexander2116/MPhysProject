@@ -9,9 +9,7 @@ The data is taken from range 330nm and 630nm with step ~0.04nm
 @author: Alex
 """
 
-import matplotlib.pyplot as plt
 from pandas import read_csv
-import numpy as np
 
 def import_csv(path):
     """
@@ -27,24 +25,47 @@ def import_csv(path):
         data.append(file[i].tolist())
     del file
     
-    for i in data:
-        i.pop(0)
-    
     return data
 
-path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\black_body_330_630.csv'
-data = import_csv(path)
+def change_type(x):
+    y = []
+    for i in x:
+        y.append(float(i))
+    return y
 
-x = data[0]
-y = data[1]
-del data
-
-plt.figure(figsize=(40,21))
-plt.scatter(x, y, marker='.')
-#plt.plot(x, y, ',')
-plt.xticks([])
-plt.yticks([])
-
-plt.xlabel('xlabel')
-plt.ylabel('ylabel')
-plt.show()
+class Bulb_spectra():
+    """
+    The maximal range for the spectra should be 330-630nm
+    """
+    data = [] # 0: wavelength, 2: intensity
+    wave = []
+    intensity = []
+    is_full_range = False
+    def __init__(self):
+        ### Path to black body data [0: wavelength, 1: Intensity, 2: Continous intensity]
+        path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\continous_black_body_330_630.csv'
+        self.data = import_csv(path)
+        self.wave = change_type(self.data[0])
+        self.intensity = self.data[2]
+        del self.data
+        
+    def Full_range(self):
+        self.is_full_range = True
+    
+    def Bulb_response(self, wavelength):
+        # Wavelength = single float value
+        lam = min(self.wave, key=lambda x:abs(float(x)-float(wavelength)))
+        idx = self.wave.index(float(lam))
+        
+        return self.intensity[idx]
+    
+    def Spectra(self, wavelength):
+        if self.is_full_range == True:
+            idx = self.wave.index(float(wavelength))
+            return self.intensity[idx]
+        else:
+            return self.Bulb_response(float(wavelength))
+        
+    def Remove(self):
+        del self.intensity
+        del self.wave
