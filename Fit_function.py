@@ -59,12 +59,33 @@ class Bulb_spectra():
         
         return self.intensity[idx]
     
+    
+    def More_accurate(self,wavelength):
+        lam = min(self.wave, key=lambda x:abs(float(x)-float(wavelength)))
+        idx = self.wave.index(float(lam))
+        
+        if self.wave[idx-1] < wavelength < self.wave[idx]:
+            a = wavelength - self.wave[idx-1]
+            b =  self.wave[idx] - wavelength
+            return (self.intensity[idx-1]*b + self.intensity[idx]*a)/(a+b)
+        
+        elif self.wave[idx] < wavelength < self.wave[idx+1]:
+            a = wavelength - self.wave[idx]
+            b =  self.wave[idx+1] - wavelength
+            return (self.intensity[idx]*b + self.intensity[idx+1]*a)/(a+b)
+        
+        elif wavelength == self.wave[idx]:
+            return self.intensity[idx]
+        
+        else:
+            return self.intensity[idx]
+        
     def Spectra(self, wavelength):
         if self.is_full_range == True:
             idx = self.wave.index(float(wavelength))
             return self.intensity[idx]
         else:
-            return self.Bulb_response(float(wavelength))
+            return self.More_accurate(float(wavelength))
         
     def Remove(self):
         del self.intensity
