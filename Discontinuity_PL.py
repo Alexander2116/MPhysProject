@@ -83,7 +83,7 @@ def change_type(x):
         y.append(float(i))
     return y
 
-def remove_discontinuity(intensity,x=1):
+def remove_discontinuity(intensity,x=2):
     """
     Parameters
     ----------
@@ -102,8 +102,7 @@ def remove_discontinuity(intensity,x=1):
     if x==1:
         inten_d =[]
         # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
-        ran = int((length_a - (length_a % 1019))/(1019))
-        for j in range(ran):
+        for j in range(7):
             t = 1019 + j*1014 - 1
             inten_d.append(float(intensity_diff[t])+1.0)
             inten =sum(inten_d)
@@ -117,8 +116,23 @@ def remove_discontinuity(intensity,x=1):
             intensity[t+i+1] -= inten
 
     elif x==2:
-        print('Put the code different range')
-
+        #print('Put the code different range')
+        inten_d =[]
+        # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
+        ran = int((length_a - (length_a % 1019))/(1019))-1
+        for j in range(ran):
+            t = 1019 + j*1014 - 1
+            inten_d.append(float(intensity_diff[t])+1.0)
+            inten =sum(inten_d)
+            for i in range(1014):
+                #print(t+i+1)
+                intensity[t+i+1] -= inten
+        t += 1014
+        k = len(intensity) - t
+        inten_d.append(float(intensity_diff[t])+1.0)
+        inten =sum(inten_d)
+        for i in range(k-1):
+            intensity[t+i+1] -= inten
     else:
         print('Not defined, initial values returned')
     return intensity

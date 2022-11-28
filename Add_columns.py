@@ -140,7 +140,7 @@ def Spectral_norm(spectra_list):
 def Bulb_spect(data):
     # Data = wavelength
     Bulb = BL.Bulb_spectra()
-    Bulb.Full_range() # Indicates that the range is 330-630
+    #Bulb.Full_range() # Indicates that the range is 330-630
     spec = []
     for lam in data:
         spec.append(Bulb.Spectra(float(lam)))
@@ -183,7 +183,7 @@ def __main__(PATH):
     
     """
     import_path = PATH
-    export_path = 'D:\\MPhys_data_modified_2'
+    export_path = 'D:\\test_result'
     isExist = os.path.exists(export_path)
     
     if not isExist:
@@ -227,7 +227,7 @@ def __main__(PATH):
             add_column2(final_output,removed_background, 'Backgroundless I')
             
             ### REMOVE DISCONTINUITY
-            removed_disc = DPL.remove_discontinuity(removed_background,1)
+            removed_disc = DPL.remove_discontinuity(removed_background)
             del removed_background
             #add_column(final_path,removed_disc)
             add_column2(final_output,removed_disc, 'Continous I')
@@ -269,7 +269,7 @@ def __main__(PATH):
 
 
 
-Mphys_path = 'D:\\MPhys'
+Mphys_path = 'D:\\test'
 __main__(Mphys_path)
 
 
