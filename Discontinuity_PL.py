@@ -96,12 +96,14 @@ def remove_discontinuity(intensity,x=1):
     """
     # Python does not have easy way to implements switch{}
     intensity = change_type(intensity)
+    length_a = len(intensity)
     intensity_diff = adjoined_difference(intensity)
     #330_630nm
     if x==1:
         inten_d =[]
         # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
-        for j in range(7):
+        ran = int((length_a - (length_a % 1019))/(1019))
+        for j in range(ran):
             t = 1019 + j*1014 - 1
             inten_d.append(float(intensity_diff[t])+1.0)
             inten =sum(inten_d)
