@@ -108,11 +108,7 @@ def remove_background(data,dark_data):
     clear_signal = []
     for i in range(len(data)):
         result = float(data[i]) - float(dark_data[i])
-        # Replace negative values with 0
-        if result < 0:
-            clear_signal.append(0)
-        else:
-            clear_signal.append(result)
+        clear_signal.append(result)
             
     return clear_signal
 
@@ -137,31 +133,33 @@ def Spectral_norm(spectra_list):
     # RESPONSE
     return [100*float(i)/(float(spectra_list[-1])) for i in spectra_list]
 
-def Bulb_spect(data):
+def Bulb_spect(data, full_range = False):
     # Data = wavelength
     Bulb = BL.Bulb_spectra()
-    #Bulb.Full_range() # Indicates that the range is 330-630
+    if full_range == True:
+        Bulb.Full_range() # Indicates that the range is 330-630
+        print('yes')
     spec = []
     for lam in data:
         spec.append(Bulb.Spectra(float(lam)))
     del Bulb
     return spec
 
-def Response(data):
+def Response(data, full_range = False):
     # Data = wavelength
     spec = []
-    Bulb = Bulb_spect(data)
+    Bulb = Bulb_spect(data, full_range)
     Plank = Spectral_norm(data)
     for i in range(len(data)):
         spec.append(float(Bulb[i])/float(Plank[i]))
     return spec
 
-def True_spectrum(Intensity, Wavelength):
+def True_spectrum(Intensity, Wavelength, full_range = False):
     # NORMALISED INTENSITY
     # True PL spectrum after applying blackbody radiation
     # Intensity, Wavelength = Lists
     spec = []
-    Resp = Response(Wavelength)
+    Resp = Response(Wavelength, full_range)
     for i in range(len(Intensity)):
         spec.append(float(Intensity[i])/float(Resp[i]))
     return spec
@@ -174,6 +172,17 @@ def twice_value(data_column):
     # data_column = backgroundless intensity
     return [2*float(i) for i in data_column]
 
+def remove_negative(data):
+    clear_signal=[]
+    for i in range(len(data)):
+        result = float(data[i])
+        # Replace negative values with 0
+        if result < 0:
+            clear_signal.append(0.001)
+        else:
+            clear_signal.append(result)
+            
+    return clear_signal
 
 def __main__(PATH):
     """
@@ -227,7 +236,7 @@ def __main__(PATH):
             add_column2(final_output,removed_background, 'Backgroundless I')
             
             ### REMOVE DISCONTINUITY
-            removed_disc = DPL.remove_discontinuity(removed_background)
+            removed_disc = remove_negative(DPL.remove_discontinuity(removed_background))
             del removed_background
             #add_column(final_path,removed_disc)
             add_column2(final_output,removed_disc, 'Continous I')
@@ -243,7 +252,7 @@ def __main__(PATH):
             #add_column(final_path,True_spectrum(removed_disc,Spectral_norm(Plank_spectrum(data))))
             add_column2(final_output,True_spectrum(removed_disc,data[0]), 'True Spectrum')
             
-            
+            """
             ### Half and twice data
             half_intensity = half_value(removed_disc)
             twice_intensity = twice_value(removed_disc)
@@ -259,6 +268,7 @@ def __main__(PATH):
             
             del half_intensity
             del twice_intensity
+            """
             del data
         
         del dark_data
@@ -269,7 +279,7 @@ def __main__(PATH):
 
 
 
-Mphys_path = 'D:\\test'
+Mphys_path = 'D:\\test2'
 __main__(Mphys_path)
 
 
