@@ -6,34 +6,7 @@ from pandas import read_csv
 import pandas as pd 
 import json
 
-def create_csv(path):
-    with open(path, 'w') as file: 
-        pass 
-    file.close()
 
-def add_column2(path,data, column_name = ''):
-    # Add column to csv file
-    try:
-        file = read_csv(path,header=None)
-    except:
-        pass
-
-    try:
-        column_len = len(file.columns)
-    except:
-        column_len = 0
-    
-
-    temp_data = [column_name] + data
-    del data
-    
-    try:
-        file[column_len+1] = temp_data
-    except:
-        file = pd.DataFrame(temp_data)
-    del temp_data
-        
-    file.to_csv(path,index=False,header=None)
 
 def read_txt(path):
     f = open(path, "r")
@@ -41,10 +14,16 @@ def read_txt(path):
     f.close()
     return lines
 
-def write_txt(path,data):
-    with open(path,'w') as f:
-        f.writelines(data)
-    f.close()
+def write_json(path, dictionary, indent=0):
+    if indent == 0:
+        with open(path, "w") as outfile:
+            outfile.write(dictionary)
+    else:
+        # Serializing json
+        json_object = json.dumps(dictionary, indent = indent)
+        # Writing to sample.json
+        with open("sample.json", "w") as outfile:
+            outfile.write(json_object)
 
 def select_extension(list_of_files,extension = '.txt'):
     # [s for s in list_of_files if any(xs in s for xs in extension)]

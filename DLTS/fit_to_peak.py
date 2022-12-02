@@ -11,7 +11,26 @@ import numpy as np
 import scipy.signal
 from pandas import read_csv
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
+
+### GLOBAL ####
+RATE_WINDOW_MULTIPLIER= 1527
+## Global dictionary, key is the emission rate
+## I put only t1 because relation between t1 and t2 is: t2=2.5*t1
+T1_VALUES = {
+    4: 1.525875*10**(-1),
+    10: 6.1035*10**(-2),
+    20: 3.05175*10**(-2),
+    50: 1.2208*10**(-2),
+    80: 7.629375*10**(-3),
+    200: 3.05175*10**(-3),
+    400: 1.525875*10**(-3),
+    1000: 6.1035*10**(-4)
+    }
+
+
+### DEFINED FUNCTION ####
 def import_csv(path, remove_first_list = False):
     """
     
@@ -35,6 +54,7 @@ def import_csv(path, remove_first_list = False):
 
 def life_time(T,P1,P2):
     """
+    This is actually emission rate = 1/tau
      P1 = A*B*sigma*exp(S/k) , where A and B are:
      N = A T^3/2
      v = B T^1/2
@@ -43,6 +63,12 @@ def life_time(T,P1,P2):
     """
     k = 8.617333262*10**(-5) # eV/K
     return P1* T**2 * np.exp(P2/(k*T))
+
+def capacity_dif(T, C_m,P1,P2, rate_window=80):
+    t1= T1_VALUES.get(int(rate_window))
+    t2= 2.5*t1
+    tau = life_time(T,P1,P2) # !!! This is in fact 1/tau !!!
+    return C_m*np.exp(-tau)*(np.exp(t1)-np.exp(t2))
 
 def end_of_peak(data,cond = 5*10**(-4)):
     x,y = data
@@ -64,6 +90,11 @@ def end_of_peak(data,cond = 5*10**(-4)):
             break
         
     return x[start_pos:end_pos], y[start_pos:end_pos]
+
+def fit_fun(data,rate_window =20):
+    x,y = data
+    popt, pcov = scipy.optimize.curve_fit(capacity_dif,[x,y],y)
+    return popt
 
 def separate_peaks(data):
     # Separate data to N lists, where N is the number of visible (big) peaks
@@ -96,6 +127,21 @@ def separate_peaks(data):
 
     return data_ret
 
+# Object that stores all essential informations and allows to 
+class CCF:
+    # CAPACITANE CURVE FINDER
+    RATE_WINDOW = 0
+    TEMP = [] # Temperature - x data
+    CAP = [] # Capacity - y data
+    
+    def __init__(self,x,y,rate):
+        self.TEMP = x
+        self.CAP = y
+        self.RATE_WINDOW = rate
+        print('ready')
+
+
+
 
 PATH = 'D:\\MPhys_DLTS\\Irr370-sC\\test.csv'
 data = import_csv(PATH)
@@ -103,5 +149,6 @@ data = separate_peaks(data)
 
 for da in data:
     x,y = da
+    print(fit_fun(da))
     plt.plot(x,y,',')
     plt.show()
