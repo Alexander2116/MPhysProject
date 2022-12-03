@@ -14,20 +14,53 @@ def read_txt(path):
     f.close()
     return lines
 
-def write_json(path, dictionary, indent=0):
-    if indent == 0:
-        with open(path, "w") as outfile:
-            outfile.write(dictionary)
-    else:
-        # Serializing json
-        json_object = json.dumps(dictionary, indent = indent)
-        # Writing to sample.json
-        with open("sample.json", "w") as outfile:
-            outfile.write(json_object)
+
+class deal_json:
+    PATH = '' ## PATH\\ FILE_NAME.JSON
+    global temp_data
+    
+    def __init__(self,path):
+        self.PATH = path
+        
+    def read(self):
+        with open(self.PATH, "r") as file:
+            return json.load(file)
+            
+    def create(self):
+        with open(self.PATH, 'w') as fp:
+            pass
+        
+    def update(self,entry):
+        data = self.read()
+        data.update(entry)
+        self.write(data)
+        
+    def write(self,dictionary,indent=0):
+        path = self.PATH
+        if indent == 0:
+            with open(path, "w") as outfile:
+                json.dump(dictionary,outfile)
+        else:
+            # Serializing json
+            json_object = json.dumps(dictionary, indent = indent)
+            # Writing to sample.json
+            with open(path, "w") as outfile:
+                json.dump(json_object,outfile,indent=indent)
+    
 
 def select_extension(list_of_files,extension = '.txt'):
     # [s for s in list_of_files if any(xs in s for xs in extension)]
     return [s for s in list_of_files if extension in s]
+
+def find_parameter(data,indicator):
+    value = ''
+    for line in data:
+        if line.find(indicator) != -1:
+            value = line.split('=')[-1]
+            if value.find('\n'):
+                value.replace('\n','')
+            break
+    return value
 
 def edit_data(data, indicators = ['','']):
     # Removes any details, leaves only the data column
@@ -82,6 +115,21 @@ def edit_data(data, indicators = ['','']):
     ###################################
     return return_data
 
+def remove_from_line(data):
+    new_data_lines = []
+    for line in data:
+        new_data_lines.append(line.replace('\n',''))
+    return new_data_lines
+
+def separate_comma(data):
+    d = [[] for x in range(len(data[0].split(',')))]
+    for line in data:
+        xx = line.split(',')
+        for i in range(len(d)):
+            d[i].append(xx[i])
+        del xx
+    return d
+    
 def __main__(load_data_path, export_data_path):
 
     isExist = os.path.exists(export_data_path)
@@ -108,24 +156,41 @@ def __main__(load_data_path, export_data_path):
 
     indicators= ["!voltage, capacitance (pf),Conductance (S),W(m),Theta, Nd (/cc)\n","[Spectrum]\n",
                  "[data]\n",'!Voltage, Current\n']
+    extra_metadata = ['rate window']
     for file2 in ALL_FILES:
         for file in file2[0]:
             try:
                 ext = file2[1]
                 data_path = str(file)
-                export_path = export_data_path +"\\"+ data_path.replace(ext,"_"+ext.replace('.','')+'.csv')
+                export_path = export_data_path +"\\"+ data_path.replace(ext,"_"+ext.replace('.','')+'.json')
                 import_path = load_data_path +"\\"+ data_path
-                create_csv(export_path)
+                JSS = deal_json(export_path)
+
                 data_temp = read_txt(import_path)
+                for em in extra_metadata:
+                    xjson = {str(em) : float(find_parameter(data_temp, em))}
+                    #xjson = "{%s : %i}" % (em,float(find_parameter(data_temp, em)))
+                    JSS.write(xjson)
+                    #write_json(export_path,xjson)
                 data = edit_data(data_temp, indicators)
+                del xjson
+                
+                data = remove_from_line(data)
+                if data[0] == '[data]':
+                    del data[0]
+                    
                 del(data_temp)
+                xx = separate_comma(data)
+                for i in range(len(xx)):
+                    nkey = 'data'+str(i)
+                    xjson = {nkey : xx[i]}
+                    JSS.update(xjson)
                 #read_file = pd.read_csv (r'C:\Users\Ron\Desktop\Test\Product_List.txt')
-                write_txt(export_path,data)
             except:
                 print("problem with file:  " + file)
 
 
-Import = 'D:\\MPhys_DLTS\\SX5897A_C_1_5MeV'
-Export = 'D:\\MPhys_DLTS\\SX5897A_Result'
+Import = 'D:\\MPhys_DLTS\\Irr370-sC'
+Export = 'D:\\MPhys_DLTS\\JSON_test'
 
-__main__(Import,Export)
+#__main__(Import,Export)
