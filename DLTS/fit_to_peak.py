@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import DLTS_DataCut_json as DLTSJS
 from os import listdir
+import warnings
 
 """
 ### GLOBAL ####
@@ -139,8 +140,10 @@ class CCF:
     RATE_WINDOW = 0
     TEMP = [] # Temperature - x data
     CAP = [] # Capacity - y data
-    
+    T0 = 0
+    C_m = 0
     RATE_WINDOW_MULTIPLIER= 1527
+    popt = []
     
     ## I put only t1 because relation between t1 and t2 is: t2=2.5*t1
     T1_VALUES = {
@@ -158,7 +161,15 @@ class CCF:
         self.TEMP = x
         self.CAP = y
         self.RATE_WINDOW = rate
+        m = self.find_max_index(y)
+        self.T0 = x[m]
+        self.C_m = y[m]
         #print('ready')
+        
+    def find_max_index(self,x):
+        m = np.max(x)
+        m_idx = x.index(m)
+        return m_idx
         
     def show(self):
         print(self.TEMP)
@@ -167,33 +178,40 @@ class CCF:
         t = self.TEMP
         minT = np.min(t)
         self.TEMP = [x-minT for x in t]
+        
     # COPY FROM ABOVE
     def life_time(self,T,P1,P2):
-        k = 8.617333262*10**(-5) # eV/K
-        return P1 * T**2 * np.exp(-P2/(k*T))
+        k = 1#8.617333262*10**(-5) # eV/K
+        return P1 * (T-self.T0)**2 * np.exp(-P2/(k*(T+self.T0)))
     
     # COPY FROM ABOVE
     def capacity_dif(self,T,P1,P2):
-        C_m = np.max(self.CAP)
         rate_window = self.RATE_WINDOW
         t1= self.T1_VALUES.get(int(rate_window))
         t2= 2.5*t1
         tau = self.life_time(T,P1,P2) # !!! This is in fact 1/tau !!!
-        return C_m * np.exp(-tau) * (np.exp(t1)-np.exp(t2))
+        return np.exp(-tau) *self.C_m #* np.abs(np.exp(t1)-np.exp(t2))
+        #return self.C_m * np.exp(-P1 * (T-self.T0)**2 * np.exp(-P2/(k*(T-self.T0)))) * (np.exp(t1)-np.exp(t2))
 
     def find_param(self):
-        self.norm_temp()
+        #self.norm_temp()
         x = self.TEMP
         y = self.CAP
-        popt, pcov = curve_fit(self.capacity_dif, x, y)
-        print(popt)
+        self.popt, pcov = curve_fit(self.capacity_dif, x, y)
+        return self.popt
     
+    def get_values(self):
+        E = self.popt[1]*(8.617333262*10**(-5))
+        print(E)
+        
     def plot_fit(self):
         x = self.TEMP
         y = self.CAP
         xdata = np.linspace(np.min(x), np.max(x), 100)
-
-        plt.plot(x,y)
+        p = self.popt
+        self.get_values()
+        plt.plot(xdata,self.capacity_dif(xdata,p[0],p[1]))
+        plt.plot(x,y,'o')
         plt.show()
 
 
@@ -220,5 +238,6 @@ def __main__(load_data_path):
         
         
         
+warnings.filterwarnings('ignore')
 PATH = 'D:\\MPhys_DLTS\\JSON_test'
 __main__(PATH)
