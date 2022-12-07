@@ -210,7 +210,7 @@ class CCF:
     def life_time(self,T,P1,P2):
         k = 1 #8.617333262*10**(-5) # eV/K
         #return P1 * ((T-self.T0)**2) * np.exp(-P2/(k*(T+self.T0)))
-        return P1 * ((T-self.T0)**2) * np.exp(-P2/(k*(T)))
+        return P1 * T**2 * np.exp(-P2/(k*T))
     
     def set_T0(self,value):
         self.T0 = value
@@ -219,13 +219,13 @@ class CCF:
         self.C_m = value
         
     # COPY FROM ABOVE
-    def capacity_dif(self,T,P1,P2):
+    def capacity_dif(self,T,P1,P2,C_m):
         rate_window = self.RATE_WINDOW
         t1= self.T1_VALUES.get(int(rate_window))
         t2= 2.5*t1
         tau = self.life_time(T,P1,P2) # !!! This is in fact 1/tau !!!
-        return np.exp(-tau) *self.C_m #* np.abs(np.exp(t1)-np.exp(t2))
-        #return self.C_m * np.exp(-P1 * (T-self.T0)**2 * np.exp(-P2/(k*(T-self.T0)))) * (np.exp(t1)-np.exp(t2))
+        #return np.exp(-tau) *self.C_m #* np.abs(np.exp(t1)-np.exp(t2))
+        return C_m * (np.exp(-t1*tau)-np.exp(-t2*tau))
     
     def multiple_peaks(self,T):
         T0 = self.T0_LIST
@@ -244,13 +244,13 @@ class CCF:
         #self.norm_temp()
         x = self.TEMP
         y = self.CAP
-        self.popt, pcov = curve_fit(self.capacity_dif, x, y)
+        self.popt, pcov = curve_fit(self.capacity_dif, x, y,maxfev=5000)
         return self.popt
     
     def get_values(self):
         E = self.popt[1]*(8.617333262*10**(-5))
         S = self.popt[0]
-        return S,E,self.T0, self.C_m
+        return S,E,self.T0, self.popt[2]
     
     
     def plot_multiple(self):
@@ -268,11 +268,12 @@ class CCF:
         p = self.popt
         E = round(self.get_values()[1],2)
         S = round(self.get_values()[0],4)
-        plt.plot(xdata,self.capacity_dif(xdata,p[0],p[1]))
+        plt.plot(xdata,self.capacity_dif(xdata,p[0],p[1],p[2]))
         plt.plot(x,y,'o')
         plt.text(np.max(x)*1.05, np.max(y),"S = " + str(S), fontsize = 20)
-        plt.text(np.max(x)*1.05, np.max(y)*3/5,"E = " + str(E), fontsize = 20)
-        plt.text(np.max(x)*1.05, np.max(y)/5,"Rate = " + str(self.RATE_WINDOW), fontsize = 20)
+        plt.text(np.max(x)*1.05, np.max(y)*6/9,"E = " + str(E), fontsize = 20)
+        plt.text(np.max(x)*1.05, np.max(y)*1/9,"Rate = " + str(self.RATE_WINDOW), fontsize = 20)
+        plt.text(np.max(x)*1.05, np.max(y)*3/9,"C_m = " + str(round(p[2],2)), fontsize = 20)
         plt.show()
         
     
@@ -292,7 +293,7 @@ def __main__(load_data_path):
         
         sep_data = separate_peaks(data)
         sep_data = [x for x in sep_data if x != ([],[])]
-        print(sep_data)
+
         """
         temp = sep_data[0]
         temp2 = sep_data[1]

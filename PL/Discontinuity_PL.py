@@ -12,70 +12,12 @@ between 2 adjoined X values.
 @author: Alex
 """
 
-'''
-from pandas import read_csv
-import matplotlib.pyplot as plt
-import pandas as pd
 
-def import_csv(path):
-    data = list()
-    file = read_csv(path,header=None)
-    for i in range(len(file.columns)):
-        data.append(file[i].tolist())
-    del file
-
-    for i in data:
-        i.pop(0)
-    
-    return data
-
-def create_csv(path):
-    with open(path, 'w') as file: 
-        pass 
-    file.close()
-
-def add_column(path,data):
-    
-    file = read_csv(path,header=None)
-    file[len(file.columns)+1] = data
-    file.to_csv(path,index=False,header=None)
-
-def add_column2(path,data, column_name = ''):
-
-    try:
-        file = read_csv(path,header=None)
-    except:
-        pass
-
-    try:
-        column_len = len(file.columns)
-    except:
-        column_len = 0
-    
-
-    temp_data = [column_name] + data
-    del data
-    
-    try:
-        file[column_len+1] = temp_data
-    except:
-        file = pd.DataFrame(temp_data)
-        
-    file.to_csv(path,index=False,header=None)
-
-def filter_condition(x):
-    positions = []
-    for i in range(len(x)):
-        if float(x[i])>0.11:
-            positions.append(i)
-    return positions
-'''
 def adjoined_difference(x):
     diff = []
     for i in range(len(x)-1):
         diff.append((float(x[i+1])-float(x[i])))
     return diff
-
 
 def change_type(x):
     y = []
@@ -83,7 +25,17 @@ def change_type(x):
         y.append(float(i))
     return y
 
-def remove_discontinuity(intensity,x=2):
+def close_wave(wavelengths):
+    x = wavelengths
+    xlen = len(x)
+    potential_peaks = []
+    for i in range(xlen-1):
+        if x[i+1]-x[i] <= 0.03:
+            potential_peaks.append(i+1)
+    return potential_peaks
+
+
+def remove_discontinuity(wavelength,intensity,x=3):
     """
     Parameters
     ----------
@@ -95,9 +47,13 @@ def remove_discontinuity(intensity,x=2):
         Intensity
     """
     # Python does not have easy way to implements switch{}
+    peaks = close_wave(change_type(wavelength))
+    peaks.append(len(wavelength)-1)
+
     intensity = change_type(intensity)
     length_a = len(intensity)
     intensity_diff = adjoined_difference(intensity)
+    
     #330_630nm
     if x==1:
         inten_d =[]
@@ -133,26 +89,19 @@ def remove_discontinuity(intensity,x=2):
         inten =sum(inten_d)
         for i in range(k-1):
             intensity[t+i+1] -= inten
+            
+    elif x==3:
+        inten_d =[]
+        jumps = peaks
+        ranges = [peaks[i+1]-peaks[i] for i in range(len(peaks)-1)]
+        del jumps[-1]
+        # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
+        for j in range(len(jumps)):
+            inten_d.append(float(intensity_diff[jumps[j]-1])+1.0)
+            inten = sum(inten_d)
+            for i in range(ranges[j]):
+                intensity[jumps[j]+i+1] -= inten
+
     else:
         print('Not defined, initial values returned')
     return intensity
-
-"""
-def __main__():
-    import_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\black_body_330_630.csv'
-    export_path = 'C:\\Users\\Alex\\Documents\\GitHub\\MPhysProject\\continous_black_body_330_630.csv'
-
-    create_csv(export_path)
-
-    data = import_csv(import_path)
-
-    x = data[0]
-    y = data[2]
-    del data
-    z = remove_discontinuity(y)
-
-    add_column2(export_path, x)
-    add_column2(export_path, y)
-    add_column2(export_path, z)
-    
-"""

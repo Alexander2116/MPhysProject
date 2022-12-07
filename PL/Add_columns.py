@@ -229,14 +229,14 @@ def __main__(PATH):
         for file2 in new_files: # files in that day
             final_output = export_path + '\\' + file2
             data = import_csv(final_output,True) # 0: Wavelength, 1: Intensity
-            
+            wavelength = data[0]
             ### REMOVE BACKGROUND
             removed_background = remove_background(data[1],dark_data)
             #add_column(final_path,removed_background)
             add_column2(final_output,removed_background, 'Backgroundless I')
             
             ### REMOVE DISCONTINUITY
-            removed_disc = remove_negative(DPL.remove_discontinuity(removed_background))
+            removed_disc = remove_negative(DPL.remove_discontinuity(wavelength,removed_background))
             del removed_background
             #add_column(final_path,removed_disc)
             add_column2(final_output,removed_disc, 'Continous I')
