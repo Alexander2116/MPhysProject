@@ -208,7 +208,7 @@ class CCF:
         
     # COPY FROM ABOVE
     def life_time(self,T,P1,P2):
-        k = 1 #8.617333262*10**(-5) # eV/K
+        k = 8.617333262*10**(-5) # eV/K
         #return P1 * ((T-self.T0)**2) * np.exp(-P2/(k*(T+self.T0)))
         return P1 * T**2 * np.exp(-P2/(k*T))
     
@@ -244,11 +244,13 @@ class CCF:
         #self.norm_temp()
         x = self.TEMP
         y = self.CAP
-        self.popt, pcov = curve_fit(self.capacity_dif, x, y,maxfev=5000)
+        # P1, P2, Cm
+        guesses = [1278808,0.3,0.1] 
+        self.popt, pcov = curve_fit(self.capacity_dif, x, y,guesses,maxfev=5000,bounds=([0,0,0],[np.inf,4,np.inf]))
         return self.popt
     
     def get_values(self):
-        E = self.popt[1]*(8.617333262*10**(-5))
+        E = self.popt[1]
         S = self.popt[0]
         return S,E,self.T0, self.popt[2]
     
