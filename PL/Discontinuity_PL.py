@@ -95,13 +95,15 @@ def remove_discontinuity(wavelength,intensity,x=3):
         jumps = peaks
         ranges = [peaks[i+1]-peaks[i] for i in range(len(peaks)-1)]
         del jumps[-1]
-        # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
-        for j in range(len(jumps)):
-            inten_d.append(float(intensity_diff[jumps[j]-1])+1.0)
-            inten = sum(inten_d)
-            for i in range(ranges[j]):
-                intensity[jumps[j]+i+1] -= inten
-
+        if (len(peaks))>1:
+            # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
+                for j in range(len(jumps)):
+                    inten_d.append(float(intensity_diff[jumps[j]-1])+1.0)
+                    inten = sum(inten_d)
+                    for i in range(ranges[j]):
+                        intensity[jumps[j]+i+1] -= inten
+        #else:
+            #Do nothing, there are no jumps
     else:
         print('Not defined, initial values returned')
     return intensity
