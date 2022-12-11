@@ -44,6 +44,13 @@ def change_json_values(data):
     return [float(x) for x in data]
 
 
+def chi_sq(measured,expected):
+    chi_sqr = 0
+    for i in range(len(measured)):
+        chi_sqr += ((measured[i]-expected[i])**2) /(abs(expected[i]))
+    return chi_sqr
+
+
 # Object that stores all essential informations and allows to 
 class CCF:
     # CAPACITANE CURVE FINDER
@@ -139,16 +146,40 @@ class CCF:
         ydata = [0]*500
         p = self.popt
         n = self.NO_PEAKS
+        yexpt = [0]*len(y)
+        relativ = [0]*len(y)
+        peak_data = [[] for x in range(len(y))]
+        
         
         plt.plot(x,y,'o')
         for i in range(n):
             plt.plot(xdata,self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i]),label="E="+ str(round(p[1+3*i],3)))
             ydata += self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i])
+            for j in range(len(x)):
+                yexpt[j] += self.capacity_dif(x[j],p[0+3*i],p[1+3*i],p[2+3*i])
+                a = y[j]-self.capacity_dif(x[j],p[0+3*i],p[1+3*i],p[2+3*i])
+                peak_data[i].append(a)
+        
+        for j in range(len(y)):
+            relativ[j] = y[j] - yexpt[j]
+            
+        chi_sqrt = sum([(abs(x)/max(relativ))**2 for x in relativ])/(len(y)-3*n)
+
         plt.plot(xdata,ydata,label="Sum of all peaks")
         plt.legend()
         plt.title('Rate Window = '+str(self.RATE_WINDOW))
         plt.show()
         
+        plt.plot(xdata,xdata*0)
+        plt.plot(x,relativ/(max(relativ)),'o',label="Chi = " + str(round(chi_sqrt,4)))
+        plt.legend()
+        plt.show()
+        
+        plt.plot(xdata,xdata*0)
+        for i in range(n):
+            plt.plot(x,peak_data[i],'o', label=str(i))
+        plt.legend()
+        plt.show()
     
 
 
