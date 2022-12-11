@@ -16,22 +16,6 @@ import DLTS_DataCut_json as DLTSJS
 from os import listdir
 import warnings
 
-"""
-### GLOBAL ####
-RATE_WINDOW_MULTIPLIER= 1527
-## Global dictionary, key is the emission rate
-## I put only t1 because relation between t1 and t2 is: t2=2.5*t1
-T1_VALUES = {
-    4: 1.525875*10**(-1),
-    10: 6.1035*10**(-2),
-    20: 3.05175*10**(-2),
-    50: 1.2208*10**(-2),
-    80: 7.629375*10**(-3),
-    200: 3.05175*10**(-3),
-    400: 1.525875*10**(-3),
-    1000: 6.1035*10**(-4)
-    }
-"""
 
 ### DEFINED FUNCTION ####
 def import_csv(path, remove_first_list = False):
@@ -54,25 +38,7 @@ def import_csv(path, remove_first_list = False):
             i.pop(0)
             
     return data
-"""
-def life_time(T,P1,P2):
-    '''
-    This is actually emission rate = 1/tau
-     P1 = A*B*sigma*exp(S/k) , where A and B are:
-     N = A T^3/2
-     v = B T^1/2
-     A, B can be taken from literautre
-     P2 = H (or delta E)
-    '''
-    k = 8.617333262*10**(-5) # eV/K
-    return P1* T**2 * np.exp(P2/(k*T))
 
-def capacity_dif(T, C_m,P1,P2, rate_window=80):
-    t1= T1_VALUES.get(int(rate_window))
-    t2= 2.5*t1
-    tau = life_time(T,P1,P2) # !!! This is in fact 1/tau !!!
-    return C_m*np.exp(-tau)*(np.exp(t1)-np.exp(t2))
-"""
 def end_of_peak(data,cond = 5*10**(-4)):
     x,y = data
     m = np.max(y)
@@ -91,21 +57,15 @@ def end_of_peak(data,cond = 5*10**(-4)):
         start_pos = m_idx - i
         if y[start_pos]<cond:
             break
-        
-    return x[start_pos:end_pos], y[start_pos:end_pos]
 
-"""
-def fit_fun(data,rate_window =20):
-    x,y = data
-    popt, pcov = scipy.optimize.curve_fit(capacity_dif,[x,y],y)
-    return popt
-"""
+    return x[start_pos:end_pos], y[start_pos:end_pos], start_pos
+
 
 def separate_peaks(data):
     # Separate data to N lists, where N is the number of visible (big) peaks
     x,y = data # Must be 2D data
     peaks,_ = scipy.signal.find_peaks(y,distance=5,height = 0.002) #,height=0.001, threshold = 0.0002
-    print(peaks)
+    final_peaks = []
     min_b_peaks = []
     min_b_peaks_idx = [0]
     data_ret = []
@@ -125,12 +85,14 @@ def separate_peaks(data):
     if len(min_b_peaks_idx)>0:
         for i in range(len(min_b_peaks_idx)-1):
             da = [x[min_b_peaks_idx[i]:min_b_peaks_idx[i+1]],y[min_b_peaks_idx[i]:min_b_peaks_idx[i+1]]]
-            data_ret.append(end_of_peak(da))
+            final_peaks.append(peaks[i] - min_b_peaks_idx[i]- end_of_peak(da)[2]-2)
+            data_ret.append([end_of_peak(da)[0],end_of_peak(da)[1]])
             
     else:
         data_ret = [end_of_peak(data)]
+        final_peaks.append(peaks[0])
 
-    return data_ret
+    return data_ret, final_peaks
 
 def change_json_values(data):
     return [float(x) for x in data]
@@ -156,6 +118,7 @@ class CCF:
     TEMP = [] # Temperature - x data
     CAP = [] # Capacity - y data
     T0 = 0
+    PEAK_INDEX = 0
     
     T0_LIST = []
     P1_LIST = []
@@ -178,13 +141,14 @@ class CCF:
         1000: 6.1035*10**(-4)
         }
     
-    def __init__(self,x,y,rate):
+    def __init__(self,x,y,rate,peak_idx = 0):
         self.TEMP = x
         self.CAP = y
         self.RATE_WINDOW = rate
         m = self.find_max_index(y)
         self.T0 = x[m]
         self.C_m = y[m]
+        self.PEAK_INDEX = peak_idx
         #print('ready')
     
     def insert_lists(self,P1,P2,T0,C_m):
@@ -198,9 +162,6 @@ class CCF:
         m_idx = x.index(m)
         return m_idx
         
-    def show(self):
-        print(self.TEMP)
-    
     def norm_temp(self):
         t = self.TEMP
         minT = np.min(t)
@@ -246,7 +207,20 @@ class CCF:
         y = self.CAP
         # P1, P2, Cm
         guesses = [1278808,0.3,0.1] 
-        self.popt, pcov = curve_fit(self.capacity_dif, x, y,guesses,maxfev=5000,bounds=([0,0,0],[np.inf,4,np.inf]))
+        
+        # Set weights to the points
+        sigma = np.ones(len(x))*0.000001
+        
+        
+        ypeak = self.PEAK_INDEX
+        sigma[ypeak] = 0.0000001
+        sigma[[ypeak-1,ypeak+1]] = 0.0000002
+        try:
+            sigma[[ypeak-2,ypeak+2]] = 0.0000004
+        except:
+            print()
+        
+        self.popt, pcov = curve_fit(self.capacity_dif, x, y,guesses,maxfev=5000,bounds=([0,0,0],[np.inf,4,np.inf]),sigma=sigma)
         return self.popt
     
     def get_values(self):
@@ -296,18 +270,14 @@ def __main__(load_data_path):
         sep_data = separate_peaks(data)
         sep_data = [x for x in sep_data if x != ([],[])]
 
-        """
-        temp = sep_data[0]
-        temp2 = sep_data[1]
 
-        new_temp = separate(temp, 69)
-        sep_data = [new_temp[0],new_temp[1],temp2]
-        """
         P1, P2, T0, C_m = [],[],[],[]
         
-        for i in sep_data:
-            x,y = i
-            FCC = CCF(x,y,win_rate)
+        for i in range(len(sep_data[0])):
+            x,y = sep_data[0][i]
+            peak_idx = sep_data[1][i]
+            
+            FCC = CCF(x,y,win_rate,peak_idx)
             FCC.find_param()
             plt.title(fp)
             FCC.plot_fit()
