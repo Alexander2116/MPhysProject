@@ -84,6 +84,12 @@ class CCF:
         self.RATE_WINDOW = rate
         #print('ready')
     
+    def export_popt(self):
+        return self.popt
+    
+    def import_popt(self,popt):
+        self.popt = popt
+    
     def number_of_peaks(self,n):
         self.NO_PEAKS = n
 
@@ -122,17 +128,22 @@ class CCF:
         x = self.TEMP
         y = self.CAP
         n = self.NO_PEAKS
-        p = [1] * (n*3)
         bound_min = [0] * (n*3)
         bound_max = [0] * (n*3)
-        inc = 0.08/n
         for i in range(n):
-            p[0 + 3*i]= 1278808 # S
-            p[1 + 3*i]= 0.12+inc*i # E
-            p[2 + 3*i]= 0.1 # C_m
             bound_max[0 + 3*i] = np.inf
             bound_max[1 + 3*i] = 4
             bound_max[2 + 3*i] = np.inf
+        
+        if len(self.popt) == 0:
+            p = [1] * (n*3)
+            inc = 0.08/n
+            for i in range(n):
+                p[0 + 3*i]= 1278808 # S
+                p[1 + 3*i]= 0.12+inc*i # E
+                p[2 + 3*i]= 0.1 # C_m
+        else:
+            p = self.popt
         # P1, P2, Cm
         #self.popt, pcov = curve_fit(self.fit_all, x, y, p0=params_0, maxfev=5000,bounds=([0,0,0],[np.inf,4,np.inf]))
         self.popt, pcov = curve_fit(self.fit_all,x,y, p0=p, maxfev=100000, bounds=(bound_min,bound_max))
@@ -146,15 +157,31 @@ class CCF:
         ydata = [0]*500
         p = self.popt
         n = self.NO_PEAKS
-        yexpt = [0]*len(y)
-        relativ = [0]*len(y)
-        peak_data = [[] for x in range(len(y))]
         
         
         plt.plot(x,y,'o')
         for i in range(n):
             plt.plot(xdata,self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i]),label="E="+ str(round(p[1+3*i],3)))
             ydata += self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i])
+
+        plt.plot(xdata,ydata,label="Sum of all peaks")
+        plt.legend()
+        plt.title('Rate Window = '+str(self.RATE_WINDOW))
+        plt.show()
+        
+        
+    def plot_extra(self):
+        x = self.TEMP
+        y = self.CAP
+        xdata = np.linspace(np.min(x), np.max(x), 500)
+        p = self.popt
+        n = self.NO_PEAKS
+        yexpt = [0]*len(y)
+        relativ = [0]*len(y)
+        peak_data = [[] for x in range(len(y))]
+        
+        
+        for i in range(n):
             for j in range(len(x)):
                 yexpt[j] += self.capacity_dif(x[j],p[0+3*i],p[1+3*i],p[2+3*i])
                 a = y[j]-self.capacity_dif(x[j],p[0+3*i],p[1+3*i],p[2+3*i])
@@ -163,28 +190,26 @@ class CCF:
         for j in range(len(y)):
             relativ[j] = y[j] - yexpt[j]
             
-        chi_sqrt = sum([(abs(x)/max(relativ))**2 for x in relativ])/(len(y)-3*n)
+        chi_sqrt = sum([(abs(i)/max(relativ))**2 for i in relativ])/(len(y)-n**n)
 
-        plt.plot(xdata,ydata,label="Sum of all peaks")
-        plt.legend()
-        plt.title('Rate Window = '+str(self.RATE_WINDOW))
-        plt.show()
-        
         plt.plot(xdata,xdata*0)
-        plt.plot(x,relativ/(max(relativ)),'o',label="Chi = " + str(round(chi_sqrt,4)))
+        plt.ylim([-0.0012,0.0012])
+        plt.plot(x,relativ,'o',label="Chi = " + str(round(chi_sqrt,4)))
         plt.legend()
         plt.show()
         
         plt.plot(xdata,xdata*0)
+        plt.ylim([-0.002,0.015])
         for i in range(n):
             plt.plot(x,peak_data[i],'o', label=str(i))
         plt.legend()
         plt.show()
-    
 
 
-def __main__(load_data_path):
+def __main__(load_data_path,N):
     filenames = listdir(load_data_path)
+    popts = [[] for x in range(len(filenames))]
+    iii = 0
     for fp in filenames:
         import_path = load_data_path + '\\' + fp
         JS = DLTSJS.deal_json(import_path)
@@ -193,17 +218,60 @@ def __main__(load_data_path):
 
         win_rate = int(JS.read()['rate window'])
         del JS
-        
-        x1 = x1[10:47]
-        y1 = y1[10:47]
+        if win_rate == 80:
+            x1 = x1[6:37]
+            y1 = y1[6:37]
+        elif win_rate == 200:
+            x1 = x1[6:38]
+            y1 = y1[6:38]
+        else:
+            x1 = x1[10:47]
+            y1 = y1[10:47]
         
         FCC = CCF(x1,y1,win_rate)
-        FCC.number_of_peaks(3)
+        FCC.number_of_peaks(N)
         FCC.find_param()
+        popts[iii].append(FCC.export_popt())
         FCC.plot_fit()
+        FCC.plot_extra()
+        iii += 1
+        del FCC
+    
+    for pp in popts:
+        a = list(pp[0])
+        print(a[1::3])
         
+    plt.plot([0],[0])
+    plt.show()
+    ### Force each values
+    for fp in filenames:
+        import_path = load_data_path + '\\' + fp
+        JS = DLTSJS.deal_json(import_path)
+        x1 = change_json_values(JS.read()['data1']) # Temp
+        y1 = change_json_values(JS.read()['data2']) # dC
 
+        win_rate = int(JS.read()['rate window'])
+        del JS
+        if win_rate == 80:
+            x1 = x1[6:37]
+            y1 = y1[6:37]
+        elif win_rate == 200:
+            x1 = x1[6:38]
+            y1 = y1[6:38]
+        else:
+            x1 = x1[10:47]
+            y1 = y1[10:47]
+        
+        for pp in popts:
+            FCC = CCF(x1,y1,win_rate)
+            FCC.import_popt(list(pp[0]))
+            FCC.number_of_peaks(N)
+            FCC.find_param()
+            FCC.plot_fit()
+            del FCC
+        plt.plot([0],[0])
+        plt.show()
 
 warnings.filterwarnings('ignore')
 PATH = 'D:\\MPhys_DLTS\\JSON_test'
-__main__(PATH)
+__main__(PATH,3)
