@@ -190,7 +190,7 @@ class CCF:
         for j in range(len(y)):
             relativ[j] = y[j] - yexpt[j]
             
-        chi_sqrt = sum([(abs(i)/max(relativ))**2 for i in relativ])/(len(y)-n**n)
+        chi_sqrt = sum([(abs(i)/max(relativ))**2 for i in relativ])/(len(y)-n*3)
 
         plt.plot(xdata,xdata*0)
         plt.ylim([-0.0012,0.0012])
@@ -206,7 +206,7 @@ class CCF:
         plt.show()
 
 
-def __main__(load_data_path,N):
+def __main__(load_data_path,N,extras = False,comparison = False):
     filenames = listdir(load_data_path)
     popts = [[] for x in range(len(filenames))]
     iii = 0
@@ -233,44 +233,46 @@ def __main__(load_data_path,N):
         FCC.find_param()
         popts[iii].append(FCC.export_popt())
         FCC.plot_fit()
-        FCC.plot_extra()
+        if extras == True:
+            FCC.plot_extra()
         iii += 1
         del FCC
     
     for pp in popts:
         a = list(pp[0])
         print(a[1::3])
-        
-    plt.plot([0],[0])
-    plt.show()
-    ### Force each values
-    for fp in filenames:
-        import_path = load_data_path + '\\' + fp
-        JS = DLTSJS.deal_json(import_path)
-        x1 = change_json_values(JS.read()['data1']) # Temp
-        y1 = change_json_values(JS.read()['data2']) # dC
-
-        win_rate = int(JS.read()['rate window'])
-        del JS
-        if win_rate == 80:
-            x1 = x1[6:37]
-            y1 = y1[6:37]
-        elif win_rate == 200:
-            x1 = x1[6:38]
-            y1 = y1[6:38]
-        else:
-            x1 = x1[10:47]
-            y1 = y1[10:47]
-        
-        for pp in popts:
-            FCC = CCF(x1,y1,win_rate)
-            FCC.import_popt(list(pp[0]))
-            FCC.number_of_peaks(N)
-            FCC.find_param()
-            FCC.plot_fit()
-            del FCC
+    
+    if comparison == True:
         plt.plot([0],[0])
         plt.show()
+        ### Force each values
+        for fp in filenames:
+            import_path = load_data_path + '\\' + fp
+            JS = DLTSJS.deal_json(import_path)
+            x1 = change_json_values(JS.read()['data1']) # Temp
+            y1 = change_json_values(JS.read()['data2']) # dC
+    
+            win_rate = int(JS.read()['rate window'])
+            del JS
+            if win_rate == 80:
+                x1 = x1[6:37]
+                y1 = y1[6:37]
+            elif win_rate == 200:
+                x1 = x1[6:38]
+                y1 = y1[6:38]
+            else:
+                x1 = x1[10:47]
+                y1 = y1[10:47]
+            
+            for pp in popts:
+                FCC = CCF(x1,y1,win_rate)
+                FCC.import_popt(list(pp[0]))
+                FCC.number_of_peaks(N)
+                FCC.find_param()
+                FCC.plot_fit()
+                del FCC
+            plt.plot([0],[0])
+            plt.show()
 
 warnings.filterwarnings('ignore')
 PATH = 'D:\\MPhys_DLTS\\JSON_test'
