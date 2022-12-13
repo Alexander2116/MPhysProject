@@ -26,6 +26,7 @@ def change_type(x):
     return y
 
 def close_wave(wavelengths):
+    ## Takes peaks at start of the acquised data set
     x = wavelengths
     xlen = len(x)
     potential_peaks = []
@@ -46,13 +47,14 @@ def remove_discontinuity(wavelength,intensity,x=3):
     Returns
         Intensity
     """
-    # Python does not have easy way to implements switch{}
+    # Peaks contain the LAST element of the data as well
     peaks = close_wave(change_type(wavelength))
     peaks.append(len(wavelength)-1)
 
     intensity = change_type(intensity)
     length_a = len(intensity)
     intensity_diff = adjoined_difference(intensity)
+    
     
     #330_630nm
     if x==1:
@@ -94,14 +96,16 @@ def remove_discontinuity(wavelength,intensity,x=3):
         inten_d =[]
         jumps = peaks
         ranges = [peaks[i+1]-peaks[i] for i in range(len(peaks)-1)]
+
         del jumps[-1]
         if (len(peaks))>1:
             # Positions start at 2033 entry [2032 position in the list], the next one is =+1014 till 8117
                 for j in range(len(jumps)):
-                    inten_d.append(float(intensity_diff[jumps[j]-1])+1.0)
+                    d = intensity[jumps[j]+2] - intensity[jumps[j]] # (i+2 - i+1) + (i+1 - i)
+                    inten_d.append((float(intensity_diff[jumps[j]-1]) + d)/3)
                     inten = sum(inten_d)
                     for i in range(ranges[j]):
-                        intensity[jumps[j]+i+1] -= inten
+                        intensity[jumps[j]+i] -= inten
         #else:
             #Do nothing, there are no jumps
     else:

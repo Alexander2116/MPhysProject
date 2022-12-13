@@ -192,7 +192,7 @@ def __main__(PATH):
     
     """
     import_path = PATH
-    export_path = 'D:\\test_result'
+    export_path = 'D:\\MPhys_data_modified'
     isExist = os.path.exists(export_path)
     
     if not isExist:
@@ -214,11 +214,11 @@ def __main__(PATH):
             ### MEAN INTENSITY  
             mean_int = mean_intensity(data)[0]
             mean_int_std = mean_intensity(data)[1]
-            
+
             add_column2(final_output,data[0], 'wavelength [nm]')
             add_column2(final_output,mean_int, 'intensity')
             add_column2(final_output,mean_int_std, 'std of intensity')
-                
+
             del data
             
         new_files.remove('dark.csv')
@@ -237,6 +237,7 @@ def __main__(PATH):
             
             ### REMOVE DISCONTINUITY
             removed_disc = remove_negative(DPL.remove_discontinuity(wavelength,removed_background))
+
             del removed_background
             #add_column(final_path,removed_disc)
             add_column2(final_output,removed_disc, 'Continous I')
@@ -279,7 +280,7 @@ def __main__(PATH):
 
 
 
-Mphys_path = 'D:\\test2'
+Mphys_path = 'D:\\PL_original_data'
 __main__(Mphys_path)
 
 
