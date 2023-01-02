@@ -190,7 +190,7 @@ def __main__(load_data_path, export_data_path):
                 print("problem with file:  " + file)
 
 
-Import = 'D:\\MPhys_DLTS\\Irr370-sC'
-Export = 'D:\\MPhys_DLTS\\JSON_test'
+Import = 'D:\\MPhys_DLTS\\Test_E3'
+Export = 'D:\\MPhys_DLTS\\JSON_E3'
 
-#__main__(Import,Export)
+__main__(Import,Export)

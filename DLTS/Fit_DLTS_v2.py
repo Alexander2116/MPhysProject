@@ -17,6 +17,9 @@ import DLTS_DataCut_json as DLTSJS
 from os import listdir
 import warnings
 
+plt.rc('xtick', labelsize=12)
+plt.rc('ytick', labelsize=12)
+
 ### DEFINED FUNCTION ####
 def import_csv(path, remove_first_list = False):
     """
@@ -59,12 +62,16 @@ class CCF:
     CAP = [] # Capacity - y data
     NO_PEAKS = 3
     
+    # Multiply P1 to receive cross section (cm^2)
+    ACS_GaN = 1/(6.493*10**20) # coefficient to change P1 to apparent cross section
+    
     P1_LIST = []
     P2_LIST = []
     C_m_LIST = []
     
     RATE_WINDOW_MULTIPLIER= 1527
     popt = []
+    pcov = []
     
     ## I put only t1 because relation between t1 and t2 is: t2=2.5*t1
     T1_VALUES = {
@@ -137,7 +144,7 @@ class CCF:
         
         if len(self.popt) == 0:
             p = [1] * (n*3)
-            inc = 0.08/n
+            inc = 0.04/n
             for i in range(n):
                 p[0 + 3*i]= 1278808 # S
                 p[1 + 3*i]= 0.12+inc*i # E
@@ -146,8 +153,18 @@ class CCF:
             p = self.popt
         # P1, P2, Cm
         #self.popt, pcov = curve_fit(self.fit_all, x, y, p0=params_0, maxfev=5000,bounds=([0,0,0],[np.inf,4,np.inf]))
-        self.popt, pcov = curve_fit(self.fit_all,x,y, p0=p, maxfev=100000, bounds=(bound_min,bound_max))
+        self.popt, self.pcov = curve_fit(self.fit_all,x,y, p0=p, maxfev=100000, bounds=(bound_min,bound_max))
         return self.popt
+
+    
+
+    def cross_sections(self):
+        cross_section = []
+        p = self.popt
+        for i in range(self.NO_PEAKS):
+            cross_section.append(p[0+3*i]*self.ACS_GaN)
+            
+        return cross_section
 
 
     def plot_fit(self):
@@ -156,17 +173,29 @@ class CCF:
         xdata = np.linspace(np.min(x), np.max(x), 500)
         ydata = [0]*500
         p = self.popt
+        pEerr = np.sqrt(self.pcov[1][1])
         n = self.NO_PEAKS
         
         
         plt.plot(x,y,'o')
         for i in range(n):
-            plt.plot(xdata,self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i]),label="E="+ str(round(p[1+3*i],3)))
+            pEerr = np.sqrt(self.pcov[1+3*i])
+            pEerr = pEerr[~np.isnan(pEerr)]
+            pEerr = np.min(pEerr)
+            
+            Eerror = ' ('+ str(round(pEerr,4)) +')'
+            
+            plt.plot(xdata,self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i]),label="$\Delta$E = "+ str(round(p[1+3*i],3))+Eerror+ ' eV')
             ydata += self.capacity_dif(xdata,p[0+3*i],p[1+3*i],p[2+3*i])
-
-        plt.plot(xdata,ydata,label="Sum of all peaks")
+        if n>1:
+            plt.plot(xdata,ydata,label="Sum of all peaks")
+        plt.text(np.min(x),0.004,'Rate Window = '+str(self.RATE_WINDOW) + ' $s^{-1}$',
+                 bbox=dict(facecolor='none', edgecolor='grey'))
+        plt.text(x[y.index(max(y))]*1.05,max(y)*0.95,'E1',fontsize=14)
         plt.legend()
-        plt.title('Rate Window = '+str(self.RATE_WINDOW))
+        #plt.title('Rate Window = '+str(self.RATE_WINDOW))
+        plt.xlabel("Temperature (K)",fontsize = 14)
+        plt.ylabel('$\Delta$C (pF)' ,fontsize = 14)
         plt.show()
         
         
@@ -210,6 +239,7 @@ def __main__(load_data_path,N,extras = False,comparison = False):
     filenames = listdir(load_data_path)
     popts = [[] for x in range(len(filenames))]
     iii = 0
+    cross_sections = []
     for fp in filenames:
         import_path = load_data_path + '\\' + fp
         JS = DLTSJS.deal_json(import_path)
@@ -217,7 +247,10 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         y1 = change_json_values(JS.read()['data2']) # dC
 
         win_rate = int(JS.read()['rate window'])
+        
+
         del JS
+        
         if win_rate == 80:
             x1 = x1[6:37]
             y1 = y1[6:37]
@@ -227,6 +260,18 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         else:
             x1 = x1[10:47]
             y1 = y1[10:47]
+            
+        """
+        if win_rate == 80:
+            x1 = x1[38:]
+            y1 = y1[38:]
+        elif win_rate == 200:
+            x1 = x1[39:]
+            y1 = y1[39:]
+        else:
+            x1 = x1[48:]
+            y1 = y1[48:]
+        """
         
         FCC = CCF(x1,y1,win_rate)
         FCC.number_of_peaks(N)
@@ -236,11 +281,15 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         if extras == True:
             FCC.plot_extra()
         iii += 1
+        cross_sections.append(FCC.cross_sections())
         del FCC
     
     for pp in popts:
         a = list(pp[0])
         print(a[1::3])
+        
+    for cs in cross_sections:
+        print(cs)
     
     if comparison == True:
         plt.plot([0],[0])
@@ -254,6 +303,7 @@ def __main__(load_data_path,N,extras = False,comparison = False):
     
             win_rate = int(JS.read()['rate window'])
             del JS
+
             if win_rate == 80:
                 x1 = x1[6:37]
                 y1 = y1[6:37]
@@ -263,6 +313,63 @@ def __main__(load_data_path,N,extras = False,comparison = False):
             else:
                 x1 = x1[10:47]
                 y1 = y1[10:47]
+            
+
+            for pp in popts:
+                FCC = CCF(x1,y1,win_rate)
+                FCC.import_popt(list(pp[0]))
+                FCC.number_of_peaks(N)
+                FCC.find_param()
+                FCC.plot_fit()
+                del FCC
+            plt.plot([0],[0])
+            plt.show()
+
+def __main2__(load_data_path,N,extras = False,comparison = False):
+    filenames = listdir(load_data_path)
+    popts = [[] for x in range(len(filenames))]
+    iii = 0
+    cross_sections = []
+    for fp in filenames:
+        import_path = load_data_path + '\\' + fp
+        JS = DLTSJS.deal_json(import_path)
+        x1 = change_json_values(JS.read()['data1']) # Temp
+        y1 = change_json_values(JS.read()['data2']) # dC
+
+        win_rate = int(JS.read()['rate window'])
+        del JS
+
+        
+        FCC = CCF(x1,y1,win_rate)
+        FCC.number_of_peaks(N)
+        FCC.find_param()
+        popts[iii].append(FCC.export_popt())
+        FCC.plot_fit()
+        if extras == True:
+            FCC.plot_extra()
+        iii += 1
+        cross_sections.append(FCC.cross_sections())
+        del FCC
+    
+    for pp in popts:
+        a = list(pp[0])
+        print(a[1::3])
+    
+    for cs in cross_sections:
+        print(cs)
+    
+    if comparison == True:
+        plt.plot([0],[0])
+        plt.show()
+        ### Force each values
+        for fp in filenames:
+            import_path = load_data_path + '\\' + fp
+            JS = DLTSJS.deal_json(import_path)
+            x1 = change_json_values(JS.read()['data1']) # Temp
+            y1 = change_json_values(JS.read()['data2']) # dC
+    
+            win_rate = int(JS.read()['rate window'])
+
             
             for pp in popts:
                 FCC = CCF(x1,y1,win_rate)
@@ -275,5 +382,9 @@ def __main__(load_data_path,N,extras = False,comparison = False):
             plt.show()
 
 warnings.filterwarnings('ignore')
-PATH = 'D:\\MPhys_DLTS\\JSON_test'
-__main__(PATH,3)
+PATH = 'D:\\MPhys_DLTS\\JSON_E1'
+__main__(PATH,4)
+
+#PATH = 'D:\\MPhys_DLTS\\JSON_E3'
+#__main2__(PATH,1)
+

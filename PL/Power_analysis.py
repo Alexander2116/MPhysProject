@@ -126,7 +126,7 @@ def __main__(IMPORT_PATH, EXPORT_PATH="D:\\PL_results_default"):
 
 
 
-Mphys_path = 'D:\\MPhys\\Analyse\\C_01nm_Wdiff'
+Mphys_path = 'D:\\MPhys\\Analyse\\C_1nm_2s_Wdiff'
 __main__(Mphys_path)
 
 
