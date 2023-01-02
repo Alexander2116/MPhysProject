@@ -147,7 +147,7 @@ class CCF:
             inc = 0.04/n
             for i in range(n):
                 p[0 + 3*i]= 1278808 # S
-                p[1 + 3*i]= 0.12+inc*i # E
+                p[1 + 3*i]= 0.26+inc*i # E
                 p[2 + 3*i]= 0.1 # C_m
         else:
             p = self.popt
@@ -160,11 +160,17 @@ class CCF:
 
     def cross_sections(self):
         cross_section = []
+        error = []
         p = self.popt
         for i in range(self.NO_PEAKS):
-            cross_section.append(p[0+3*i]*self.ACS_GaN)
+            pEerr = np.sqrt(self.pcov[0+3*i])
+            pEerr = pEerr[~np.isnan(pEerr)]
+            pEerr = np.min(pEerr)
             
-        return cross_section
+            cross_section.append(p[0+3*i]*self.ACS_GaN)
+            error.append(pEerr*self.ACS_GaN)
+            
+        return cross_section,error
 
 
     def plot_fit(self):
@@ -191,7 +197,7 @@ class CCF:
             plt.plot(xdata,ydata,label="Sum of all peaks")
         plt.text(np.min(x),0.004,'Rate Window = '+str(self.RATE_WINDOW) + ' $s^{-1}$',
                  bbox=dict(facecolor='none', edgecolor='grey'))
-        plt.text(x[y.index(max(y))]*1.05,max(y)*0.95,'E1',fontsize=14)
+        plt.text(x[y.index(max(y))]*1.05,max(y)*0.95,'EE1',fontsize=14)
         plt.legend()
         #plt.title('Rate Window = '+str(self.RATE_WINDOW))
         plt.xlabel("Temperature (K)",fontsize = 14)
@@ -250,7 +256,7 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         
 
         del JS
-        
+        """
         if win_rate == 80:
             x1 = x1[6:37]
             y1 = y1[6:37]
@@ -271,7 +277,7 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         else:
             x1 = x1[48:]
             y1 = y1[48:]
-        """
+        
         
         FCC = CCF(x1,y1,win_rate)
         FCC.number_of_peaks(N)
@@ -288,8 +294,12 @@ def __main__(load_data_path,N,extras = False,comparison = False):
         a = list(pp[0])
         print(a[1::3])
         
-    for cs in cross_sections:
-        print(cs)
+    for i in range(len(cross_sections)):
+        print("---- cross ----")
+        print(cross_sections[i][0])
+        print("---- error ----")
+        print(cross_sections[i][1])
+        print("---- ----- ----")
     
     if comparison == True:
         plt.plot([0],[0])
@@ -383,7 +393,7 @@ def __main2__(load_data_path,N,extras = False,comparison = False):
 
 warnings.filterwarnings('ignore')
 PATH = 'D:\\MPhys_DLTS\\JSON_E1'
-__main__(PATH,4)
+__main__(PATH,1)
 
 #PATH = 'D:\\MPhys_DLTS\\JSON_E3'
 #__main2__(PATH,1)
